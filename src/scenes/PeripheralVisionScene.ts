@@ -268,8 +268,21 @@ export class PeripheralVisionScene implements Scene {
     const optionFontSize = Math.max(12, pixelFromMillimeter(getSetting('optionPhysicalSizeMm')));
     const cellW = gridW / 5;
     const cellH = gridH / 4;
-    const oW = cellW * 0.8;
-    const oH = cellH * 0.8;
+    let oW = cellW * 0.8;
+    let oH = cellH * 0.8;
+    
+    const isCircle = diff === 'intermediate' || diff === 'advanced';
+    let minDist = Math.max(oW, oH) * 1.1;
+
+    if (isCircle) {
+      const maxArea = (gridW * gridH) / optionCount;
+      const safeDiameter = Math.sqrt(maxArea) * 0.85; // safe density factor
+      const defaultDiameter = Math.min(oW, oH);
+      const diameter = Math.min(defaultDiameter, safeDiameter);
+      oW = diameter;
+      oH = diameter;
+      minDist = diameter * 1.1;
+    }
 
     let positions: {x: number, y: number}[] = [];
 
@@ -283,10 +296,12 @@ export class PeripheralVisionScene implements Scene {
       shuffleArray(positions);
     } else {
       // Scattered logic
+      let safeW = Math.max(1, gridW - oW);
+      let safeH = Math.max(1, gridH - oH);
       positions = generateScatteredPositions(
         optionCount, 
-        { x: gridX + oW/2, y: gridY + oH/2, w: gridW - oW, h: gridH - oH },
-        Math.max(oW, oH) * 1.1 // minimum distance to prevent overlap
+        { x: gridX + oW/2, y: gridY + oH/2, w: safeW, h: safeH },
+        minDist // minimum distance to prevent overlap
       );
     }
 
@@ -309,7 +324,26 @@ export class PeripheralVisionScene implements Scene {
       }
 
       const optBg = new Graphics();
-      optBg.roundRect(0, 0, oW, oH, Theme.radiusS).fill({ color: Theme.bgCard }).roundRect(0, 0, oW, oH, Theme.radiusS).stroke({ color: Theme.border, width: 1 });
+      const drawState = (state: 'normal' | 'hover' | 'correct' | 'wrong') => {
+        optBg.clear();
+        let bgColor = state === 'hover' ? Theme.bgCardHover : Theme.bgCard;
+        let borderColor = state === 'hover' ? Theme.accent : Theme.border;
+        let borderWidth = state === 'hover' ? 2 : 1;
+        
+        if (state === 'correct') {
+          bgColor = 0x1A3D2B; borderColor = Theme.success; borderWidth = 2;
+        } else if (state === 'wrong') {
+          bgColor = 0x3D1A1A; borderColor = Theme.error; borderWidth = 2;
+        }
+
+        if (isCircle) {
+          optBg.circle(oW/2, oH/2, oW/2).fill({ color: bgColor }).stroke({ color: borderColor, width: borderWidth });
+        } else {
+          optBg.roundRect(0, 0, oW, oH, Theme.radiusS).fill({ color: bgColor }).stroke({ color: borderColor, width: borderWidth });
+        }
+      };
+      
+      drawState('normal');
       optContainer.addChild(optBg);
 
       const optText = new Text({
@@ -328,13 +362,9 @@ export class PeripheralVisionScene implements Scene {
         currentY: pos.y,
       };
 
-      optContainer.on('pointerover', () => {
-        optBg.clear().roundRect(0, 0, oW, oH, Theme.radiusS).fill({ color: Theme.bgCardHover }).roundRect(0, 0, oW, oH, Theme.radiusS).stroke({ color: Theme.accent, width: 2 });
-      });
-      optContainer.on('pointerout', () => {
-        optBg.clear().roundRect(0, 0, oW, oH, Theme.radiusS).fill({ color: Theme.bgCard }).roundRect(0, 0, oW, oH, Theme.radiusS).stroke({ color: Theme.border, width: 1 });
-      });
-      optContainer.on('pointertap', () => this.handleOptionClick(gameOpt, optBg, oW, oH));
+      optContainer.on('pointerover', () => { if (!this.feedbackActive) drawState('hover'); });
+      optContainer.on('pointerout', () => { if (!this.feedbackActive) drawState('normal'); });
+      optContainer.on('pointertap', () => this.handleOptionClick(gameOpt, drawState));
 
       this.options.push(gameOpt);
       this.optionsLayer.addChild(optContainer);
@@ -343,13 +373,13 @@ export class PeripheralVisionScene implements Scene {
     this.roundStartTime = performance.now();
   }
 
-  private handleOptionClick(opt: GameOption, bg: Graphics, w: number, h: number): void {
+  private handleOptionClick(opt: GameOption, drawState: (state: 'normal'|'hover'|'correct'|'wrong') => void): void {
     if (this.feedbackActive || this.gameState !== 'playing') return;
     this.feedbackActive = true;
     const timeMs = Math.round(performance.now() - this.roundStartTime);
 
     if (opt.isCorrect) {
-      bg.clear().roundRect(0, 0, w, h, Theme.radiusS).fill({ color: 0x1A3D2B }).roundRect(0, 0, w, h, Theme.radiusS).stroke({ color: Theme.success, width: 2 });
+      drawState('correct');
       SoundManager.playCorrect();
       this.score += 10;
       
@@ -371,11 +401,11 @@ export class PeripheralVisionScene implements Scene {
         }
       }, 400);
     } else {
-      bg.clear().roundRect(0, 0, w, h, Theme.radiusS).fill({ color: 0x3D1A1A }).roundRect(0, 0, w, h, Theme.radiusS).stroke({ color: Theme.error, width: 2 });
+      drawState('wrong');
       SoundManager.playIncorrect();
 
       setTimeout(() => {
-        bg.clear().roundRect(0, 0, w, h, Theme.radiusS).fill({ color: Theme.bgCard }).roundRect(0, 0, w, h, Theme.radiusS).stroke({ color: Theme.border, width: 1 });
+        drawState('normal');
         this.feedbackActive = false;
       }, 400);
     }
@@ -399,6 +429,8 @@ export class PeripheralVisionScene implements Scene {
     
     const opt = this.options[Math.floor(Math.random() * this.options.length)];
     const diff = getSetting('difficulty');
+    const isCircle = diff === 'intermediate' || diff === 'advanced';
+    const optionCount = getSetting('optionCount');
     
     const gridX = 40, gridY = 120;
     const gridW = this.cachedW - 80;
@@ -406,8 +438,19 @@ export class PeripheralVisionScene implements Scene {
     
     const cellW = gridW / 5;
     const cellH = gridH / 4;
-    const oW = cellW * 0.8;
-    const oH = cellH * 0.8;
+    let oW = cellW * 0.8;
+    let oH = cellH * 0.8;
+    let minDist = Math.max(oW, oH) * 1.1;
+
+    if (isCircle) {
+      const maxArea = (gridW * gridH) / optionCount;
+      const safeDiameter = Math.sqrt(maxArea) * 0.85;
+      const defaultDiameter = Math.min(oW, oH);
+      const diameter = Math.min(defaultDiameter, safeDiameter);
+      oW = diameter;
+      oH = diameter;
+      minDist = diameter * 1.1;
+    }
     
     let bestPos = null;
 
@@ -429,10 +472,12 @@ export class PeripheralVisionScene implements Scene {
       }
     } else {
       // Scattered: find a random continuous position without overlap
-      const minDistSq = Math.pow(Math.max(oW, oH) * 1.1, 2);
+      const minDistSq = minDist * minDist;
+      let safeW = Math.max(1, gridW - oW);
+      let safeH = Math.max(1, gridH - oH);
       for (let attempt = 0; attempt < 100; attempt++) {
-        const px = gridX + oW/2 + Math.random() * (gridW - oW);
-        const py = gridY + oH/2 + Math.random() * (gridH - oH);
+        const px = gridX + oW/2 + Math.random() * safeW;
+        const py = gridY + oH/2 + Math.random() * safeH;
         
         let overlap = false;
         for (const other of this.options) {
