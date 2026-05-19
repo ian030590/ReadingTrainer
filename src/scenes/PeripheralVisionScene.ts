@@ -349,34 +349,56 @@ export class PeripheralVisionScene implements Scene {
     if (this.gameState !== 'playing' || this.options.length === 0) return;
     
     const opt = this.options[Math.floor(Math.random() * this.options.length)];
+    const diff = getSetting('difficulty');
     
-    // Bounds
     const gridX = 40, gridY = 120;
     const gridW = this.cachedW - 80;
     const gridH = this.cachedH - 95 - 60 - 140;
-    const sizePx = pixelFromMillimeter(getSetting('optionPhysicalSizeMm'));
-    const oW = sizePx * 3; // Approx physical width needed
-    const oH = sizePx * 3;
-    const minDistSq = Math.pow(Math.max(oW, oH) * 1.1, 2);
-
+    
+    const cellW = gridW / 5;
+    const cellH = gridH / 4;
+    const oW = cellW * 0.8;
+    const oH = cellH * 0.8;
+    
     let bestPos = null;
-    for (let attempt = 0; attempt < 100; attempt++) {
-      const px = gridX + oW/2 + Math.random() * (gridW - oW);
-      const py = gridY + oH/2 + Math.random() * (gridH - oH);
-      
-      let overlap = false;
-      for (const other of this.options) {
-        if (other === opt) continue;
-        const dx = px - other.currentX;
-        const dy = py - other.currentY;
-        if (dx * dx + dy * dy < minDistSq) {
-          overlap = true;
-          break;
+
+    if (diff === 'beginner') {
+      // Find empty grid cells
+      const allGridPos: {x: number, y: number}[] = [];
+      for (let r = 0; r < 4; r++) {
+        for (let c = 0; c < 5; c++) {
+          allGridPos.push({ x: gridX + c * cellW + cellW * 0.1 + oW/2, y: gridY + r * cellH + cellH * 0.1 + oH/2 });
         }
       }
-      if (!overlap) {
-        bestPos = { x: px, y: py };
-        break;
+      
+      const emptyPos = allGridPos.filter(pos => {
+        return !this.options.some(o => Math.abs(o.currentX - pos.x) < 5 && Math.abs(o.currentY - pos.y) < 5);
+      });
+
+      if (emptyPos.length > 0) {
+        bestPos = emptyPos[Math.floor(Math.random() * emptyPos.length)];
+      }
+    } else {
+      // Scattered: find a random continuous position without overlap
+      const minDistSq = Math.pow(Math.max(oW, oH) * 1.1, 2);
+      for (let attempt = 0; attempt < 100; attempt++) {
+        const px = gridX + oW/2 + Math.random() * (gridW - oW);
+        const py = gridY + oH/2 + Math.random() * (gridH - oH);
+        
+        let overlap = false;
+        for (const other of this.options) {
+          if (other === opt) continue;
+          const dx = px - other.currentX;
+          const dy = py - other.currentY;
+          if (dx * dx + dy * dy < minDistSq) {
+            overlap = true;
+            break;
+          }
+        }
+        if (!overlap) {
+          bestPos = { x: px, y: py };
+          break;
+        }
       }
     }
 
