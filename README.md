@@ -55,16 +55,18 @@ xxx.setGoBack(() => sm.goTo('trainingList'));
 TrainingRegistry.register(xxx);
 ``` 
 
-## 目前可用的訓練模組
+## 訓練模組
 
-### 1. 移動卡片訓練 (Moving Card Training)
+### 移動卡片訓練 (Moving Card Training)
 
 動態字母配對遊戲，訓練注視中心點時快速辨識周邊文字的能力。
 
 - **校正機制**：文字大小根據螢幕校正值（塑膠卡片法）動態計算
 - **參考資料**：FrACT10 CardController、styts/eye-training
 
-### 2. 視力評估 (Visual Acuity Assessment)
+## 評估模組
+
+### 視力評估 (Visual Acuity Assessment)
 
 類似 FrACT10 的視力測驗模組，使用 BestPEST 自適應閾值算法自動調整視標大小以測定視力閾值。
 

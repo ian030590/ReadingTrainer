@@ -72,77 +72,7 @@ function GeneralTab({ refresh }: { refresh: () => void }) {
         editPlaceholder="60"
       />
 
-      {/* Total Rounds */}
-      <SettingRow
-        title="訓練回合數"
-        desc="每次訓練的回合數量"
-        value={`${getSetting('totalRounds')} 回合`}
-        onEdit={(val) => {
-          const num = parseInt(val, 10);
-          if (!isNaN(num) && num >= 1 && num <= 100) {
-            setSetting('totalRounds', num);
-            refresh();
-          }
-        }}
-        editPlaceholder="5"
-      />
 
-      {/* Difficulty */}
-      <div className="setting-row">
-        <div className="setting-info">
-          <h3>難度設定</h3>
-          <p>控制選項排列方式</p>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {(['beginner', 'intermediate', 'advanced'] as const).map((d) => {
-            const labels: Record<string, string> = {
-              beginner: '初級',
-              intermediate: '中級',
-              advanced: '高級',
-            };
-            const isActive = getSetting('difficulty') === d;
-            return (
-              <button
-                key={d}
-                className={`btn btn-sm ${isActive ? 'btn-primary' : 'btn-ghost'}`}
-                onClick={() => { setSetting('difficulty', d); refresh(); }}
-              >
-                {labels[d]}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* Option Count */}
-      <SettingRow
-        title="選項數量"
-        desc="每回合顯示的字母卡片數量"
-        value={`${getSetting('optionCount')} 個`}
-        onEdit={(val) => {
-          const num = parseInt(val, 10);
-          if (!isNaN(num) && num >= 4 && num <= 40) {
-            setSetting('optionCount', num);
-            refresh();
-          }
-        }}
-        editPlaceholder="18"
-      />
-
-      {/* Move Interval */}
-      <SettingRow
-        title="移動間隔"
-        desc="選項移動的時間間隔（毫秒）"
-        value={`${getSetting('optionMoveIntervalMs')} ms`}
-        onEdit={(val) => {
-          const num = parseInt(val, 10);
-          if (!isNaN(num) && num >= 200 && num <= 5000) {
-            setSetting('optionMoveIntervalMs', num);
-            refresh();
-          }
-        }}
-        editPlaceholder="800"
-      />
 
       {/* Sound Toggle */}
       <div className="setting-row">
