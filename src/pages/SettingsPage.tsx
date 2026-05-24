@@ -79,13 +79,13 @@ function GeneralTab({ refresh }: { refresh: () => void }) {
             className={`btn btn-sm ${lang === 'zh' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setLang('zh'); refresh(); }}
           >
-            中文
+            {lang === 'zh' ? '中文' : 'Chinese'}
           </button>
           <button
             className={`btn btn-sm ${lang === 'en' ? 'btn-primary' : 'btn-secondary'}`}
             onClick={() => { setLang('en'); refresh(); }}
           >
-            English
+            {lang === 'zh' ? '英文' : 'English'}
           </button>
         </div>
       </div>
@@ -262,7 +262,7 @@ function CardCalibration({ refresh }: { refresh: () => void }) {
         style={{ marginTop: 16 }}
         onClick={() => { setSetting('calBarLengthInMM', 149); refresh(); }}
       >
-        重設校正值
+        {t('settings.cal.resetBtn')}
       </button>
     </div>
   );
@@ -523,7 +523,7 @@ function GammaTab({ refresh }: { refresh: () => void }) {
       </div>
 
       <div style={{ marginTop: 20, fontSize: 18, fontWeight: 700, color: 'var(--accent)' }}>
-        Gamma: {gammaVal.toFixed(2)}
+        {t('settings.tab.gamma')}: {gammaVal.toFixed(2)}
       </div>
 
       <div style={{ display: 'flex', gap: 8, justifyContent: 'center', marginTop: 12 }}>

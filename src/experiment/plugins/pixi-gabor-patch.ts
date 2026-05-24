@@ -37,6 +37,10 @@ const info = {
       type: ParameterType.STRING,
       default: '#808080',
     },
+    difficulty: {
+      type: ParameterType.STRING,
+      default: 'beginner',
+    },
   },
   data: {
     rt: { type: ParameterType.INT },
@@ -90,7 +94,7 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
   static info = info;
   private app: Application | null = null;
   private textures: Texture[] = [];
-  private spots: Array<{ sprite: Sprite, targetSize: number, targetOpacity: number, type: number, spawnTime: number, maxScore: number, minSize: number }> = [];
+  private spots: Array<{ sprite: Sprite, targetSize: number, targetOpacity: number, type: number, spawnTime: number, maxScore: number, minSize: number, lifetime: number }> = [];
   private score = 0;
   private hits = 0;
   private gameStartTime = 0;
@@ -170,12 +174,12 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
         
         const minSize = trial.min_size ?? 0.2;
         const maxSize = trial.max_size ?? 0.8;
-        const targetSize = minSize + Math.random() * Math.random() * (maxSize - minSize);
+        const targetSize = maxSize;
         sprite.scale.set(minSize);
         
         const minOp = trial.min_opacity ?? 0.15;
         const maxOp = trial.max_opacity ?? 0.8;
-        const targetOpacity = minOp + Math.random() * (maxOp - minOp);
+        const targetOpacity = maxOp;
         sprite.alpha = 0;
         
         sprite.eventMode = 'static';
@@ -183,7 +187,15 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
 
         const spawnTime = performance.now();
         const maxScore = 1000;
-        const spotData = { sprite, targetSize, targetOpacity, type, spawnTime, maxScore, minSize };
+        
+        let lifetime = 4000;
+        if (trial.difficulty === 'intermediate') {
+          lifetime = 3000;
+        } else if (trial.difficulty === 'advanced') {
+          lifetime = 2000;
+        }
+
+        const spotData = { sprite, targetSize, targetOpacity, type, spawnTime, maxScore, minSize, lifetime };
 
         sprite.on('pointerdown', (e: any) => {
           e.stopPropagation();
@@ -206,11 +218,10 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
         updateHUD();
 
         // Update spots (grow, fade in, and remove if score <= 0)
-        const lifetime = 3000; // 3 seconds to click
         for (let i = this.spots.length - 1; i >= 0; i--) {
           const spot = this.spots[i];
           const spotAge = time - spot.spawnTime;
-          const progress = Math.min(1, spotAge / lifetime);
+          const progress = Math.min(1, spotAge / spot.lifetime);
           
           const currentSize = spot.minSize + progress * (spot.targetSize - spot.minSize);
           const currentOpacity = progress * spot.targetOpacity;
@@ -229,7 +240,13 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
         }
 
         // Spawn new spots if under limit
-        if (this.spots.length < (trial.max_spots ?? 10) && Math.random() < 0.05) {
+        let spawnChance = 0.02;
+        if (trial.difficulty === 'intermediate') {
+          spawnChance = 0.05;
+        } else if (trial.difficulty === 'advanced') {
+          spawnChance = 0.08;
+        }
+        if (this.spots.length < (trial.max_spots ?? 10) && Math.random() < spawnChance) {
           spawnSpot();
         }
 
@@ -243,13 +260,12 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
     });
   }
 
-  private handleSpotClick(spot: { sprite: Sprite, targetSize: number, targetOpacity: number, type: number, spawnTime: number, maxScore: number, minSize: number }) {
+  private handleSpotClick(spot: { sprite: Sprite, targetSize: number, targetOpacity: number, type: number, spawnTime: number, maxScore: number, minSize: number, lifetime: number }) {
     if (this.isGameOver || !this.app) return;
 
     const now = performance.now();
     const spotAge = now - spot.spawnTime;
-    const lifetime = 3000;
-    const progress = Math.min(1, spotAge / lifetime);
+    const progress = Math.min(1, spotAge / spot.lifetime);
     const finalPoints = Math.max(0, Math.ceil(spot.maxScore * (1 - progress)));
 
     if (finalPoints <= 0) return; // ignore clicks on dead spots

@@ -127,6 +127,7 @@ function buildOculomotorTimeline(
 
 function buildGaborPatchTimeline(
   overrides?: {
+    difficulty?: string;
     gabor?: {
       durationSec?: number;
       maxSpots?: number;
@@ -135,12 +136,14 @@ function buildGaborPatchTimeline(
 ): object[] {
   const durationSec = overrides?.gabor?.durationSec ?? getSetting('oculomotorDurationSec'); // fallback to general duration
   const maxSpots = overrides?.gabor?.maxSpots ?? 10;
+  const difficulty = overrides?.difficulty ?? getSetting('difficulty');
 
   return [
     {
       type: PixiGaborPatchPlugin,
       duration_ms: Math.round(durationSec * 1000),
       max_spots: maxSpots,
+      difficulty: difficulty,
       // Default parameters will be used for min_size, max_size, etc.
     },
   ];

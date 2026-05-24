@@ -775,6 +775,23 @@ export function HomePage() {
       {expandedModule === 'gabor-patch' && (
         <div className="config-modal-overlay fade-in" onClick={() => setExpandedModule(null)}>
           <div className="module-config-panel config-modal-panel" onClick={(e) => e.stopPropagation()}>
+            {/* Difficulty */}
+            <div className="config-section">
+              <div className="config-label">{t('home.config.difficulty')}</div>
+              <div className="difficulty-selector">
+                {diffOptions.map((opt) => (
+                  <button
+                    key={opt.key}
+                    className={`diff-btn ${localDifficulty === opt.key ? 'active' : ''}`}
+                    onClick={(e) => { e.stopPropagation(); setLocalDifficulty(opt.key); }}
+                  >
+                    <span className="diff-btn-label">{opt.label}</span>
+                    <span className="diff-btn-desc">{opt.desc}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Duration */}
             <div className="config-section">
               <div className="config-label">{t('home.config.gaborDuration')}</div>
@@ -851,6 +868,7 @@ export function HomePage() {
 
             <div className="config-summary">
               {t('home.config.user')} <strong>{activeUser}</strong> ·{' '}
+              {t('home.config.diffLabel')} <strong>{diffOptions.find((d) => d.key === localDifficulty)?.label}</strong> ·{' '}
               {t('home.config.durationLabel')} <strong>{gaborDurationSec}s</strong> ·{' '}
               {t('home.config.gaborMaxSpots')} <strong>{gaborMaxSpots}</strong>
             </div>
