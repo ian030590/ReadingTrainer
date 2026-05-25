@@ -115,16 +115,19 @@ function buildOculomotorTimeline(
     timeline.push({
       type: WebgazerInitCameraPlugin,
     });
-    timeline.push({
-      type: WebgazerCalibratePlugin,
-      calibration_points: [
-        [10, 10], [10, 50], [10, 90],
-        [50, 10], [50, 50], [50, 90],
-        [90, 10], [90, 50], [90, 90],
-      ],
-      repetitions_per_point: 2,
-      randomize_calibration_order: true,
-    });
+    
+    if (!getSetting('webGazerCalibrationAt')) {
+      timeline.push({
+        type: WebgazerCalibratePlugin,
+        calibration_points: [
+          [10, 10], [10, 50], [10, 90],
+          [50, 10], [50, 50], [50, 90],
+          [90, 10], [90, 50], [90, 90],
+        ],
+        repetitions_per_point: 2,
+        randomize_calibration_order: true,
+      });
+    }
   }
 
   timeline.push({
