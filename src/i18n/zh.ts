@@ -1,7 +1,7 @@
 export const zh = {
   // Navigation
-  'nav.trainingList': '訓練清單',
-  'nav.assessment': '視力評估',
+  'nav.trainingList': '視覺訓練',
+  'nav.assessment': '視覺評估',
   'nav.settings': '設定與校正',
   'nav.credits': '致謝',
   'nav.noUser': '未選擇使用者',

@@ -2,9 +2,9 @@ import type { TranslationKey } from './zh';
 
 export const en: Record<TranslationKey, string> = {
   // Navigation
-  'nav.trainingList': 'Training List',
-  'nav.assessment': 'Assessment',
-  'nav.settings': 'Settings & Calibration',
+  'nav.trainingList': 'Visual Training',
+  'nav.assessment': 'Visual Assessment',
+  'nav.settings': 'Settings',
   'nav.credits': 'Credits',
   'nav.noUser': 'No User Selected',
 
