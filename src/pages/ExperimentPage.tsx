@@ -157,7 +157,7 @@ export function ExperimentPage() {
     const isGabor = moduleId === 'gabor-patch';
     let headers: string[];
     if (isOculomotor) {
-      headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.mode'), t('exp.csv.path'), t('exp.csv.duration'), t('exp.csv.acquired'), t('exp.csv.fps'), 'AOI Score', t('exp.csv.status')];
+      headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.mode'), t('exp.csv.path'), t('exp.csv.duration'), t('exp.csv.acquired'), t('exp.csv.fps'), t('exp.csv.aoi'), t('exp.csv.status')];
     } else if (isGabor) {
       headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.duration'), t('exp.csv.score'), t('exp.csv.acquired')];
     } else {
@@ -239,14 +239,14 @@ export function ExperimentPage() {
               fontSize: 14,
               color: 'var(--text-secondary)',
             }}>
-              <span>{t('exp.res.mode')}: <b style={{ color: 'var(--accent)' }}>{t(`preset.mode.${oculomotorResult?.mode || oculomotorMode}` as any)}</b></span>
-              <span>{t('exp.res.path')}: <b style={{ color: 'var(--accent)' }}>{t(`preset.path.${oculomotorResult?.pattern || oculomotorPattern}` as any)}</b></span>
-              <span>{t('exp.res.acquired')}: <b style={{ color: 'var(--accent)' }}>{oculomotorResult?.acquired_targets ?? 0}</b></span>
-              <span>{t('exp.res.fps')}: <b style={{ color: 'var(--accent)' }}>{oculomotorResult?.average_fps ?? '-'}</b></span>
+              <span>{t('exp.res.mode')} <b style={{ color: 'var(--accent)' }}>{t(`preset.mode.${oculomotorResult?.mode || oculomotorMode}` as any)}</b></span>
+              <span>{t('exp.res.path')} <b style={{ color: 'var(--accent)' }}>{t(`preset.path.${oculomotorResult?.pattern || oculomotorPattern}` as any)}</b></span>
+              <span>{t('exp.res.acquired')} <b style={{ color: 'var(--accent)' }}>{oculomotorResult?.acquired_targets ?? 0}</b></span>
+              <span>{t('exp.res.fps')} <b style={{ color: 'var(--accent)' }}>{oculomotorResult?.average_fps ?? '-'}</b></span>
               {(oculomotorResult as any)?.aoi_score !== undefined && (
-                <span>AOI Score: <b style={{ color: 'var(--accent)' }}>{(oculomotorResult as any).aoi_score}</b></span>
+                <span>{t('exp.res.aoi')} <b style={{ color: 'var(--accent)' }}>{(oculomotorResult as any).aoi_score}</b></span>
               )}
-              <span>{t('exp.res.user')}: <b>{userName}</b></span>
+              <span>{t('exp.res.user')} <b>{userName}</b></span>
             </div>
           </>
         ) : moduleId === 'gabor-patch' ? (
@@ -263,9 +263,9 @@ export function ExperimentPage() {
               fontSize: 14,
               color: 'var(--text-secondary)',
             }}>
-              <span>{t('exp.res.acquired')}: <b style={{ color: 'var(--accent)' }}>{results[0]?.acquired_targets ?? 0}</b></span>
+              <span>{t('exp.res.acquired')} <b style={{ color: 'var(--accent)' }}>{results[0]?.acquired_targets ?? 0}</b></span>
               <span>{t('home.config.durationLabel')} <b style={{ color: 'var(--accent)' }}>{Math.round((results[0]?.duration_ms ?? 0) / 1000)}s</b></span>
-              <span>{t('exp.res.user')}: <b>{userName}</b></span>
+              <span>{t('exp.res.user')} <b>{userName}</b></span>
             </div>
           </>
         ) : (
@@ -278,9 +278,9 @@ export function ExperimentPage() {
               fontSize: 14,
               color: 'var(--text-secondary)',
             }}>
-              <span>{t('exp.res.avgRt')}: <b style={{ color: 'var(--accent)' }}>{avgRt} ms</b></span>
-              <span>{t('exp.res.medRt')}: <b style={{ color: 'var(--accent)' }}>{medianRt} ms</b></span>
-              <span>{t('exp.res.user')}: <b>{userName}</b></span>
+              <span>{t('exp.res.avgRt')} <b style={{ color: 'var(--accent)' }}>{avgRt} ms</b></span>
+              <span>{t('exp.res.medRt')} <b style={{ color: 'var(--accent)' }}>{medianRt} ms</b></span>
+              <span>{t('exp.res.user')} <b>{userName}</b></span>
             </div>
 
             <table className="results-table">
