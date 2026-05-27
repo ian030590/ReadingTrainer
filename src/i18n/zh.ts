@@ -312,6 +312,8 @@ export const zh = {
   // Credits Page
   'credits.title': '致謝',
   'credits.subtitle': '參考的開源專案與資源',
+  'credits.webgazer.title': 'WebGazer.js',
+  'credits.webgazer.desc': '提供基於攝影機的視線追蹤功能，使用機器學習模型估計使用者注視位置。',
   'credits.fract10.title': '視力評估與螢幕校正',
   'credits.fract10.desc': '參考 michaelbach/FrACT10 的實作方法與演算法',
   'credits.eyeTraining.title': '移動卡片訓練',
