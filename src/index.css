@@ -931,6 +931,7 @@ html, body, #root {
 .card:nth-child(2) { animation-delay: 0.10s; }
 .card:nth-child(3) { animation-delay: 0.15s; }
 .card:nth-child(4) { animation-delay: 0.20s; }
+.card:nth-child(5) { animation-delay: 0.25s; }
 
 /* ── Settings Page ── */
 .settings-container {

@@ -84,6 +84,8 @@ export function HomePage() {
   const [readingWPS, setReadingWPS] = useState(() => getSetting('readingWPS'));
   const [readingCrowding, setReadingCrowding] = useState(() => getSetting('readingCrowding'));
   const [readingContrast, setReadingContrast] = useState(() => getSetting('readingContrast'));
+  const [drivingDurationSec, setDrivingDurationSec] = useState(() => getSetting('drivingDurationSec'));
+  const [drivingRedFlashEnabled, setDrivingRedFlashEnabled] = useState(() => getSetting('drivingRedFlashEnabled'));
   const [prewarmed, setPrewarmed] = useState(() => pixiAppManager.ready);
 
   const refreshUsers = useCallback(() => {
@@ -116,6 +118,18 @@ export function HomePage() {
   // ── Warm up PixiJS when module panel expands ──
   useEffect(() => {
     if (!expandedModule) return;
+    if (expandedModule === 'driving-rehab') {
+      setPrewarmed(false);
+      let cancelled = false;
+      import('three')
+        .then(() => {
+          if (!cancelled) setPrewarmed(true);
+        })
+        .catch(() => {
+          if (!cancelled) setPrewarmed(false);
+        });
+      return () => { cancelled = true; };
+    }
     if (pixiAppManager.ready) {
       setPrewarmed(true);
       return;
@@ -210,6 +224,14 @@ export function HomePage() {
     setSetting('readingContrast', readingContrast);
   }, [readingContrast]);
 
+  useEffect(() => {
+    setSetting('drivingDurationSec', drivingDurationSec);
+  }, [drivingDurationSec]);
+
+  useEffect(() => {
+    setSetting('drivingRedFlashEnabled', drivingRedFlashEnabled);
+  }, [drivingRedFlashEnabled]);
+
 
   // ── Handlers ──
   const handleCardClick = (moduleId: string) => {
@@ -258,6 +280,11 @@ export function HomePage() {
 
     if (expandedModule === 'reading-training') {
       navigate('/training?module=reading-training');
+      return;
+    }
+
+    if (expandedModule === 'driving-rehab') {
+      navigate(`/training?module=driving-rehab&duration=${drivingDurationSec}&redFlash=${drivingRedFlashEnabled}`);
       return;
     }
 
@@ -603,6 +630,50 @@ export function HomePage() {
               strokeWidth="2.5"
               style={{
                 transform: expandedModule === 'reading-training' ? 'rotate(180deg)' : 'rotate(0deg)',
+                transition: 'transform 0.3s ease',
+              }}
+            >
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+        </div>
+
+        <div
+          className={`card fade-in-up ${expandedModule === 'driving-rehab' ? 'card-active' : ''}`}
+          onClick={() => handleCardClick('driving-rehab')}
+        >
+          <div className="card-icon">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M3 13h18l-2 6H5l-2-6Z" />
+              <path d="M6 13l2-5h8l2 5" />
+              <circle cx="7.5" cy="19" r="1.5" />
+              <circle cx="16.5" cy="19" r="1.5" />
+              <path d="M10 4h4" />
+            </svg>
+          </div>
+          <div className="card-title">{t('home.module.driving.title')}</div>
+          <div className="card-desc">
+            {t('home.module.driving.desc')}
+          </div>
+          <div style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            marginTop: 16,
+            fontSize: 13,
+            color: 'var(--accent)',
+            fontWeight: 600,
+          }}>
+            {expandedModule === 'driving-rehab' ? t('btn.collapseSettings') : t('btn.selectModule')}
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              style={{
+                transform: expandedModule === 'driving-rehab' ? 'rotate(180deg)' : 'rotate(0deg)',
                 transition: 'transform 0.3s ease',
               }}
             >
@@ -1191,6 +1262,110 @@ export function HomePage() {
             <div className="config-summary">
               {t('home.config.user')} <strong>{activeUser}</strong> ·{' '}
               故事 <strong>隨機抽選</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {expandedModule === 'driving-rehab' && (
+        <div className="config-modal-overlay fade-in" onClick={() => setExpandedModule(null)}>
+          <div className="module-config-panel config-modal-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="config-section">
+              <div className="config-label">{t('home.config.drivingMission')}</div>
+              <div className="difficulty-selector">
+                <div className="diff-btn" style={{ cursor: 'default', alignItems: 'stretch' }}>
+                  <span className="diff-btn-label">{t('home.config.drivingRoute')}</span>
+                  <span className="diff-btn-desc">{t('home.config.drivingRouteDesc')}</span>
+                </div>
+                <div className="diff-btn" style={{ cursor: 'default', alignItems: 'stretch' }}>
+                  <span className="diff-btn-label">{t('home.config.drivingEvents')}</span>
+                  <span className="diff-btn-desc">{t('home.config.drivingEventsDesc')}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="config-section">
+              <div className="config-label">{t('home.config.drivingDuration')}</div>
+              <div className="rounds-selector">
+                {durationPresets.map((duration) => (
+                  <button
+                    key={duration}
+                    className={`rounds-btn ${drivingDurationSec === duration ? 'active' : ''}`}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setDrivingDurationSec(duration);
+                    }}
+                  >
+                    {duration}s
+                  </button>
+                ))}
+                <input
+                  className="rounds-custom-input"
+                  type="number"
+                  min="30"
+                  max="300"
+                  value={drivingDurationSec}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => {
+                    const value = parseInt(e.target.value, 10);
+                    if (Number.isFinite(value)) {
+                      setDrivingDurationSec(Math.max(30, Math.min(300, value)));
+                    }
+                  }}
+                />
+              </div>
+            </div>
+
+            <div className="config-section">
+              <div className="config-label">{t('home.config.drivingAssist')}</div>
+              <label className="diff-btn" style={{ cursor: 'pointer', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: '12px 16px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                  <span className="diff-btn-label">{t('home.config.drivingRedFlash')}</span>
+                  <span className="diff-btn-desc">{t('home.config.drivingRedFlashDesc')}</span>
+                </div>
+                <input
+                  type="checkbox"
+                  checked={drivingRedFlashEnabled}
+                  onClick={(e) => e.stopPropagation()}
+                  onChange={(e) => setDrivingRedFlashEnabled(e.target.checked)}
+                  style={{ transform: 'scale(1.5)', cursor: 'pointer' }}
+                />
+              </label>
+            </div>
+
+            <div className="config-section">
+              <div className="config-label">{t('home.config.drivingControls')}</div>
+              <div className="color-settings-row">
+                <div className="color-field"><span>{t('home.config.drivingSteer')}</span><strong>← / →</strong></div>
+                <div className="color-field"><span>{t('home.config.drivingThrottle')}</span><strong>↑</strong></div>
+                <div className="color-field"><span>{t('home.config.drivingBrake')}</span><strong>↓</strong></div>
+                <div className="color-field"><span>{t('home.config.drivingWheel')}</span><strong>Gamepad API</strong></div>
+              </div>
+            </div>
+
+            <div className="config-actions">
+              <button
+                className="btn btn-primary btn-lg config-start-btn"
+                onClick={(e) => { e.stopPropagation(); handleStartTraining(); }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5,3 19,12 5,21" />
+                </svg>
+                {t('btn.startTraining')}
+                {prewarmed && <span className="ready-dot" />}
+              </button>
+              <button
+                className="btn btn-ghost btn-lg"
+                onClick={(e) => { e.stopPropagation(); setExpandedModule(null); }}
+              >
+                {t('btn.cancel')}
+              </button>
+            </div>
+
+            <div className="config-summary">
+              {t('home.config.user')} <strong>{activeUser}</strong> ·{' '}
+              {t('home.config.durationLabel')} <strong>{drivingDurationSec}s</strong> ·{' '}
+              {t('home.config.drivingRedFlash')} <strong>{drivingRedFlashEnabled ? t('common.on') : t('common.off')}</strong>
             </div>
           </div>
         </div>

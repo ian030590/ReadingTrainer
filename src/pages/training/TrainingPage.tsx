@@ -5,6 +5,7 @@ import { initJsPsych } from 'jspsych';
 import type { JsPsych } from 'jspsych';
 import PixiMovingCardPlugin from '../../experiment/plugins/pixi-moving-card';
 import PixiOculomotorTrainingPlugin from '../../experiment/plugins/pixi-oculomotor-training';
+import ThreeDrivingRehabPlugin from '../../experiment/plugins/three-driving-rehab';
 import WebGazerExtension from '@jspsych/extension-webgazer';
 import { buildTimeline } from '../../experiment/timeline';
 import { getActiveUser, getSetting } from '../../utils/settings';
@@ -21,6 +22,7 @@ import type { OculomotorTargetShape } from './oculomotor/types';
 // Ensure the plugin class is referenced so bundler doesn't tree-shake it
 void PixiMovingCardPlugin;
 void PixiOculomotorTrainingPlugin;
+void ThreeDrivingRehabPlugin;
 
 type Phase = 'running' | 'results';
 
@@ -38,6 +40,22 @@ interface TrialData {
   score?: number;
   trial_type?: string;
   reading_time?: number;
+  average_rt?: number;
+  median_rt?: number;
+  valid_event_count?: number;
+  collisions?: number;
+  lane_deviations?: number;
+  route_progress?: number;
+  driving_events?: Array<{
+    event_id: string;
+    label: string;
+    distance_m: number;
+    rt_ms: number | null;
+    valid: boolean;
+    collision: boolean;
+    brake_preheld: boolean;
+    response: string;
+  }>;
 }
 
 export function TrainingPage() {
@@ -68,6 +86,12 @@ export function TrainingPage() {
   const oculomotorBackgroundColor = searchParams.get('backgroundColor') || getSetting('oculomotorBackgroundColor');
   const oculomotorCustomTargetImage = getSetting('oculomotorCustomTargetImage');
   const enableWebGazer = getSetting('oculomotorEnableWebgazer');
+  const drivingDurationSec = parseInt(searchParams.get('duration') || '', 10)
+    || getSetting('drivingDurationSec');
+  const requestedDrivingFlash = searchParams.get('redFlash');
+  const drivingRedFlashEnabled = requestedDrivingFlash === null
+    ? getSetting('drivingRedFlashEnabled')
+    : requestedDrivingFlash === 'true';
 
   const [phase, setPhase] = useState<Phase>('running');
   const [results, setResults] = useState<TrialData[]>([]);
@@ -139,6 +163,10 @@ export function TrainingPage() {
           crowding: getSetting('readingCrowding'),
           contrast: getSetting('readingContrast'),
         },
+        driving: {
+          durationSec: drivingDurationSec,
+          redFlashEnabled: drivingRedFlashEnabled,
+        },
       });
       jsPsych.run(timeline as any);
     };
@@ -166,6 +194,8 @@ export function TrainingPage() {
     oculomotorBackgroundColor,
     oculomotorTargetShape,
     oculomotorCustomTargetImage,
+    drivingDurationSec,
+    drivingRedFlashEnabled,
   ]);
 
   const downloadCSV = useCallback(() => {
@@ -178,6 +208,7 @@ export function TrainingPage() {
     const isOculomotor = moduleId === 'oculomotor-training';
     const isGabor = moduleId === 'gabor-patch';
     const isReading = moduleId === 'reading-training';
+    const isDriving = moduleId === 'driving-rehab';
     let headers: string[];
     if (isOculomotor) {
       headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.mode'), t('exp.csv.path'), t('exp.csv.duration'), t('exp.csv.acquired'), t('exp.csv.fps'), t('exp.csv.aoi'), t('exp.csv.status')];
@@ -185,10 +216,27 @@ export function TrainingPage() {
       headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.duration'), t('exp.csv.score'), t('exp.csv.acquired')];
     } else if (isReading) {
       headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), 'WPS', 'Crowding', t('exp.csv.target'), t('exp.csv.response'), t('exp.csv.correct'), t('exp.csv.rt')];
+    } else if (isDriving) {
+      headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.event'), t('exp.csv.rt'), t('exp.csv.valid'), t('exp.csv.collision'), t('exp.csv.preBrake'), t('exp.csv.response'), t('exp.csv.laneDeviations'), t('exp.csv.fps')];
     } else {
       headers = [t('exp.csv.user'), t('exp.csv.date'), t('exp.csv.time'), t('exp.csv.module'), t('exp.csv.diff'), t('exp.csv.round'), t('exp.csv.target'), t('exp.csv.response'), t('exp.csv.correct'), t('exp.csv.rt')];
     }
-    const rows: (string | number)[][] = results.map((r, i) => {
+    const rows: (string | number)[][] = isDriving
+      ? ((results[0]?.driving_events ?? []).map((event) => [
+        userName,
+        dateStr,
+        timeStr,
+        moduleId,
+        event.label,
+        event.rt_ms ?? '',
+        event.valid ? 'true' : 'false',
+        event.collision ? 'true' : 'false',
+        event.brake_preheld ? 'true' : 'false',
+        event.response,
+        results[0]?.lane_deviations ?? 0,
+        results[0]?.average_fps ?? '',
+      ]))
+      : results.map((r, i) => {
       const baseRow = [userName, dateStr, timeStr, moduleId];
       if (isOculomotor) {
         return [...baseRow, t(`preset.mode.${r.mode || oculomotorMode}` as any), t(`preset.path.${r.pattern || oculomotorPattern}` as any), r.duration_ms ?? r.rt, r.acquired_targets ?? 0, r.average_fps ?? '', (r as any).aoi_score ?? '-', r.response];
@@ -204,12 +252,16 @@ export function TrainingPage() {
       }
     });
 
-    if (!isOculomotor && !isGabor) {
+    if (!isOculomotor && !isGabor && !isDriving) {
       const avgRt = Math.round(results.reduce((sum, r) => sum + r.rt, 0) / results.length);
       const correctCount = results.filter((r) => r.correct).length;
       rows.push(['']);
       rows.push([t('exp.avgRt'), `${avgRt} ms`]);
       rows.push([t('exp.correctRate'), `${correctCount}/${results.length}`]);
+    } else if (isDriving) {
+      rows.push(['']);
+      rows.push([t('exp.res.avgRt'), `${results[0]?.average_rt ?? 0} ms`]);
+      rows.push([t('exp.res.collisions'), `${results[0]?.collisions ?? 0}`]);
     }
 
     const csvContent = [
@@ -255,10 +307,13 @@ export function TrainingPage() {
     : 0;
   const isOculomotor = moduleId === 'oculomotor-training';
   const isReading = moduleId === 'reading-training';
+  const isDriving = moduleId === 'driving-rehab';
   const oculomotorResult = results[0];
   const readingQuestions = results.filter((r: any) => r.trial_type === 'html-button-response');
   const readingCorrect = readingQuestions.filter(r => r.correct).length;
   const readingTime = results.find((r: any) => r.trial_type === 'pixi-reading-training')?.reading_time || 0;
+  const drivingResult = results[0];
+  const drivingEvents = drivingResult?.driving_events ?? [];
 
   return (
     <div key="results" className="experiment-container" style={{ overflowY: 'auto' }}>
@@ -306,6 +361,54 @@ export function TrainingPage() {
               <span>{t('home.config.durationLabel')} <b style={{ color: 'var(--accent)' }}>{Math.round((results[0]?.duration_ms ?? 0) / 1000)}s</b></span>
               <span>{t('exp.res.user')} <b>{userName}</b></span>
             </div>
+          </>
+        ) : isDriving ? (
+          <>
+            <div className="results-score" style={{ color: 'var(--accent)' }}>
+              {drivingResult?.average_rt ?? 0} ms
+            </div>
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 24,
+              marginBottom: 16,
+              fontSize: 14,
+              color: 'var(--text-secondary)',
+            }}>
+              <span>{t('exp.res.validEvents')} <b style={{ color: 'var(--accent)' }}>{drivingResult?.valid_event_count ?? 0}</b></span>
+              <span>{t('exp.res.collisions')} <b style={{ color: 'var(--accent)' }}>{drivingResult?.collisions ?? 0}</b></span>
+              <span>{t('exp.res.laneDeviations')} <b style={{ color: 'var(--accent)' }}>{drivingResult?.lane_deviations ?? 0}</b></span>
+              <span>{t('exp.res.fps')} <b style={{ color: 'var(--accent)' }}>{drivingResult?.average_fps ?? '-'}</b></span>
+              <span>{t('exp.res.user')} <b>{userName}</b></span>
+            </div>
+
+            <table className="results-table" style={{ maxWidth: 920 }}>
+              <thead>
+                <tr>
+                  <th>{t('exp.res.thEvent')}</th>
+                  <th>{t('exp.res.thRt')}</th>
+                  <th>{t('exp.res.thValid')}</th>
+                  <th>{t('exp.res.thCollision')}</th>
+                  <th>{t('exp.res.thResp')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {drivingEvents.map((event, i) => (
+                  <tr key={`${event.event_id}-${i}`}>
+                    <td style={{ fontWeight: 600, color: 'var(--accent)' }}>{event.label}</td>
+                    <td>{event.rt_ms ?? '-'}</td>
+                    <td style={{ color: event.valid ? 'var(--success)' : 'var(--warning)' }}>
+                      {event.valid ? '✓' : '排除'}
+                    </td>
+                    <td style={{ color: event.collision ? 'var(--error)' : 'var(--success)' }}>
+                      {event.collision ? '是' : '否'}
+                    </td>
+                    <td>{event.response}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </>
         ) : isReading ? (
           <>
@@ -459,5 +562,3 @@ function EyegameSubPage() {
     </div>
   );
 }
-
-

@@ -5,6 +5,7 @@
 import PixiMovingCardPlugin from './plugins/pixi-moving-card';
 import PixiOculomotorTrainingPlugin from './plugins/pixi-oculomotor-training';
 import PixiGaborPatchPlugin from './plugins/pixi-gabor-patch';
+import ThreeDrivingRehabPlugin from './plugins/three-driving-rehab';
 import WebgazerInitCameraPlugin from '@jspsych/plugin-webgazer-init-camera';
 import WebgazerCalibratePlugin from '@jspsych/plugin-webgazer-calibrate';
 import HtmlButtonResponsePlugin from '@jspsych/plugin-html-button-response';
@@ -50,6 +51,10 @@ export function buildTimeline(
       contrast?: number;
       story?: ReadingStory;
     };
+    driving?: {
+      durationSec?: number;
+      redFlashEnabled?: boolean;
+    };
   },
 ): object[] {
   switch (moduleId) {
@@ -61,10 +66,32 @@ export function buildTimeline(
       return buildGaborPatchTimeline(overrides);
     case 'reading-training':
       return buildReadingTimeline(overrides);
+    case 'driving-rehab':
+      return buildDrivingRehabTimeline(overrides);
     default:
       console.warn(`Unknown module: ${moduleId}, falling back to moving-card`);
       return buildMovingCardTimeline(overrides);
   }
+}
+
+function buildDrivingRehabTimeline(
+  overrides?: {
+    driving?: {
+      durationSec?: number;
+      redFlashEnabled?: boolean;
+    };
+  },
+): object[] {
+  const durationSec = overrides?.driving?.durationSec ?? getSetting('drivingDurationSec');
+  const redFlashEnabled = overrides?.driving?.redFlashEnabled ?? getSetting('drivingRedFlashEnabled');
+
+  return [
+    {
+      type: ThreeDrivingRehabPlugin,
+      duration_ms: Math.round(durationSec * 1000),
+      red_flash_enabled: redFlashEnabled,
+    },
+  ];
 }
 
 function buildMovingCardTimeline(
