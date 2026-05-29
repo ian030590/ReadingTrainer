@@ -406,6 +406,7 @@ export function drawContrastGrating(
   contrast: number, // 0 to 1
   backColorHex: string, // e.g. '#808080' for background
   periodPx: number = 40 // Default width of one cycle in pixels
+) {
   ctx.save();
   ctx.translate(cx, cy);
 
