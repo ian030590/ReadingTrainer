@@ -395,6 +395,82 @@ export function drawGrating(
   ctx.restore();
 }
 
+// ── Sine Wave Grating for Contrast Sensitivity ──
+
+export function drawContrastGrating(
+  ctx: CanvasRenderingContext2D,
+  cx: number,
+  cy: number,
+  size: number,
+  direction: number, // 0, 2, 4, 6 (0=vertical, 2=diagonal, 4=horizontal, 6=diagonal)
+  contrast: number, // 0 to 1
+  backColorHex: string // e.g. '#808080' for background
+) {
+  ctx.save();
+  ctx.translate(cx, cy);
+
+  // circular mask
+  const r = size / 2;
+  ctx.beginPath();
+  ctx.arc(0, 0, r, 0, Math.PI * 2);
+  ctx.clip();
+  
+  // rotation
+  const angle = (-direction * 22.5 * Math.PI) / 180;
+  ctx.rotate(angle);
+
+  // draw sinusoidal grating using ImageData
+  // We need to render the grating pattern. Since we rotated the context, it's easier to just draw lines.
+  // Actually, to get true sinusoid and avoid line-drawing artifacts, let's use ImageData without ctx.rotate, or use ImageData and put it on a temporary canvas, then drawImage with rotation.
+
+  const s2 = Math.ceil(size * 1.5);
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = s2;
+  tempCanvas.height = s2;
+  const tempCtx = tempCanvas.getContext('2d')!;
+  
+  const imgData = tempCtx.createImageData(s2, s2);
+  const data = imgData.data;
+
+  const bgR = parseInt(backColorHex.slice(1, 3), 16) || 128;
+  const bgG = parseInt(backColorHex.slice(3, 5), 16) || 128;
+  const bgB = parseInt(backColorHex.slice(5, 7), 16) || 128;
+
+  const periodPx = size / 4; // 4 cycles across the mask
+  const trigFactor = (2 * Math.PI) / periodPx;
+  
+  // Calculate sinusoid values in a 1D array to save time
+  const sinVals = new Float32Array(s2);
+  for (let x = 0; x < s2; x++) {
+    sinVals[x] = Math.sin(x * trigFactor);
+  }
+
+  let i = 0;
+  for (let y = 0; y < s2; y++) {
+    for (let x = 0; x < s2; x++) {
+      // 0 = mean luminance. sine goes from -1 to 1.
+      // value = meanLuminance * (1 + contrast * sin(x))
+      // Since it's web sRGB, we should do it in linear space ideally, but simple approximation works for standard tests.
+      // We will modulate luminance
+      const modulation = contrast * sinVals[x];
+      // assuming bgR is the mean
+      const rVal = Math.min(255, Math.max(0, bgR * (1 + modulation)));
+      const gVal = Math.min(255, Math.max(0, bgG * (1 + modulation)));
+      const bVal = Math.min(255, Math.max(0, bgB * (1 + modulation)));
+
+      data[i++] = rVal;
+      data[i++] = gVal;
+      data[i++] = bVal;
+      data[i++] = 255; // alpha
+    }
+  }
+  tempCtx.putImageData(imgData, 0, 0);
+
+  ctx.drawImage(tempCanvas, -s2 / 2, -s2 / 2);
+
+  ctx.restore();
+}
+
 // ── Convenience: clear canvas with background color ──
 
 export function clearCanvas(

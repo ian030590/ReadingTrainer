@@ -36,7 +36,7 @@ export function ContrastTestPage() {
       });
       jsPsychRef.current = jsPsych;
 
-      const pest = new BestPEST(8);
+      const pest = new BestPEST(4); // 4 alternatives for grating
       const totalTrials = 18;
       let currentTrial = 0;
       let appliedStim = 0.5;
@@ -48,24 +48,20 @@ export function ContrastTestPage() {
         return `#${hex}${hex}${hex}`;
       };
 
-      const getForeColor = () => {
+      const getContrast = () => {
         appliedStim = pest.nextStim2apply();
         const logCSWMaximal = 2.0; // Max logCS
         const logCSW = logCSWMaximal - logCSWMaximal * appliedStim;
         const weber = Math.pow(10, -logCSW);
-        const lFore = 0.5 * (1 - weber); // Darker optotype
-        const gamma = getSetting('gammaValue') || 2.2;
-        const c = Math.round(Math.pow(lFore, 1 / gamma) * 255);
-        const hex = c.toString(16).padStart(2, '0');
-        return `#${hex}${hex}${hex}`;
+        return weber;
       };
 
       const trialNode = {
         type: PixiContrastSensitivityPlugin,
-        optotype: 'landolt',
-        direction: () => Math.floor(Math.random() * 8),
-        stroke_px: 20, // fixed large size to measure contrast purely
-        fore_color: getForeColor,
+        optotype: 'grating',
+        direction: () => [0, 2, 4, 6][Math.floor(Math.random() * 4)],
+        stroke_px: 40, // 400px patch size
+        contrast: getContrast,
         back_color: getBackColor,
         on_finish: (data: any) => {
           pest.enterTrialOutcome(appliedStim, data.correct);

@@ -2,7 +2,7 @@ import { JsPsych, ParameterType } from 'jspsych';
 import type { JsPsychPlugin, TrialType } from 'jspsych';
 import { Application, Sprite, Texture, Graphics } from 'pixi.js';
 import { pixiAppManager } from '../../utils/pixiPool';
-import { drawLandoltC, drawTumblingE } from '../../pages/assessment/logic/optotypeRenderer';
+import { drawLandoltC, drawTumblingE, drawContrastGrating } from '../../pages/assessment/logic/optotypeRenderer';
 import type { LandoltDirection, EDirection } from '../../pages/assessment/logic/optotypeRenderer';
 
 const info = {
@@ -20,6 +20,10 @@ const info = {
     stroke_px: {
       type: ParameterType.INT,
       default: 10,
+    },
+    contrast: {
+      type: ParameterType.FLOAT,
+      default: 1.0,
     },
     fore_color: {
       type: ParameterType.STRING,
@@ -103,6 +107,8 @@ class PixiContrastSensitivityPlugin implements JsPsychPlugin<Info> {
         drawLandoltC(ctx, size / 2, size / 2, trial.stroke_px!, trial.direction as LandoltDirection, trial.fore_color!, trial.back_color!);
       } else if (trial.optotype === 'tumblingE') {
         drawTumblingE(ctx, size / 2, size / 2, trial.stroke_px!, trial.direction as EDirection, trial.fore_color!);
+      } else if (trial.optotype === 'grating') {
+        drawContrastGrating(ctx, size / 2, size / 2, size, trial.direction!, trial.contrast!, trial.back_color!);
       }
       
       const texture = Texture.from(canvas);
@@ -141,8 +147,24 @@ class PixiContrastSensitivityPlugin implements JsPsychPlugin<Info> {
     } else if (trial.optotype === 'tumblingE') {
       const keys = ['ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown'];
       expectedKey = keys[trial.direction! / 2];
+    } else if (trial.optotype === 'grating') {
+      const isUp = key === 'ArrowUp' || key === 'ArrowDown';
+      const isRight = key === 'ArrowRight' || key === 'ArrowLeft';
+      const isUpRight = key === 'ArrowUpRight' || key === 'ArrowDownLeft';
+      const isDownRight = key === 'ArrowDownRight' || key === 'ArrowUpLeft';
+      
+      let userDirection = -1;
+      if (isUp) userDirection = 0;
+      else if (isUpRight) userDirection = 2;
+      else if (isRight) userDirection = 4;
+      else if (isDownRight) userDirection = 6;
+      
+      isCorrect = (userDirection === trial.direction);
     }
-    isCorrect = (key.toLowerCase() === expectedKey.toLowerCase());
+    
+    if (trial.optotype !== 'grating') {
+      isCorrect = (key.toLowerCase() === expectedKey.toLowerCase());
+    }
 
     this.jsPsych.finishTrial({
       rt,
