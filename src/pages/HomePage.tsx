@@ -268,13 +268,8 @@ export function HomePage() {
       params.set('shape', oculomotorTargetShape);
     }
 
-    if (expandedModule === 'eyegame') {
-      navigate('/training?module=eyegame');
-      return;
-    }
-
-    if (expandedModule === 'gabor-patch') {
-      navigate(`/training?module=gabor-patch&duration=${gaborDurationSec}&difficulty=${localDifficulty}&maxSpots=${gaborMaxSpots}`);
+    if (expandedModule === 'gabor-patching') {
+      navigate(`/training?module=gabor-patching&duration=${gaborDurationSec}&difficulty=${localDifficulty}&maxSpots=${gaborMaxSpots}`);
       return;
     }
 
@@ -562,8 +557,8 @@ export function HomePage() {
         </div>
 
         <div
-          className={`card fade-in-up ${expandedModule === 'gabor-patch' ? 'card-active' : ''}`}
-          onClick={() => handleCardClick('gabor-patch')}
+          className={`card fade-in-up ${expandedModule === 'gabor-patching' ? 'card-active' : ''}`}
+          onClick={() => handleCardClick('gabor-patching')}
         >
           <div className="card-icon">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -572,9 +567,9 @@ export function HomePage() {
               <path d="M12 8v8" />
             </svg>
           </div>
-          <div className="card-title">{t('home.module.eyegame.title')}</div>
+          <div className="card-title">{t('home.module.gaborPatching.title')}</div>
           <div className="card-desc">
-            {t('home.module.eyegame.desc')}
+            {t('home.module.gaborPatching.desc')}
           </div>
           <div style={{
             display: 'flex',
@@ -585,7 +580,7 @@ export function HomePage() {
             color: 'var(--accent)',
             fontWeight: 600,
           }}>
-            {expandedModule === 'gabor-patch' ? t('btn.collapseSettings') : t('btn.selectModule')}
+            {expandedModule === 'gabor-patching' ? t('btn.collapseSettings') : t('btn.selectModule')}
             <svg
               width="16"
               height="16"
@@ -594,7 +589,7 @@ export function HomePage() {
               stroke="currentColor"
               strokeWidth="2.5"
               style={{
-                transform: expandedModule === 'gabor-patch' ? 'rotate(180deg)' : 'rotate(0deg)',
+                transform: expandedModule === 'gabor-patching' ? 'rotate(180deg)' : 'rotate(0deg)',
                 transition: 'transform 0.3s ease',
               }}
             >
@@ -1085,7 +1080,7 @@ export function HomePage() {
         </div>
       )}
 
-      {expandedModule === 'gabor-patch' && (
+      {expandedModule === 'gabor-patching' && (
         <div className="config-modal-overlay fade-in" onClick={() => setExpandedModule(null)}>
           <div className="module-config-panel config-modal-panel" onClick={(e) => e.stopPropagation()}>
             {/* Difficulty */}

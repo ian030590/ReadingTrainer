@@ -4,7 +4,7 @@
  */
 import PixiMovingCardPlugin from './plugins/pixi-moving-card';
 import PixiOculomotorTrainingPlugin from './plugins/pixi-oculomotor-training';
-import PixiGaborPatchPlugin from './plugins/pixi-gabor-patch';
+import PixiGaborPatchingPlugin from './plugins/pixi-gabor-patching';
 import ThreeDrivingRehabPlugin from './plugins/three-driving-rehab';
 import WebgazerInitCameraPlugin from '@jspsych/plugin-webgazer-init-camera';
 import WebgazerCalibratePlugin from '@jspsych/plugin-webgazer-calibrate';
@@ -63,8 +63,8 @@ export function buildTimeline(
       return buildMovingCardTimeline(overrides);
     case 'oculomotor-training':
       return buildOculomotorTimeline(overrides);
-    case 'gabor-patch':
-      return buildGaborPatchTimeline(overrides);
+    case 'gabor-patching':
+      return buildGaborPatchingTimeline(overrides);
     case 'reading-training':
       return buildReadingTimeline(overrides);
     case 'driving-rehab':
@@ -209,7 +209,7 @@ function buildOculomotorTimeline(
   return timeline;
 }
 
-function buildGaborPatchTimeline(
+function buildGaborPatchingTimeline(
   overrides?: {
     difficulty?: string;
     gabor?: {
@@ -224,7 +224,7 @@ function buildGaborPatchTimeline(
 
   return [
     {
-      type: PixiGaborPatchPlugin,
+      type: PixiGaborPatchingPlugin,
       duration_ms: Math.round(durationSec * 1000),
       max_spots: maxSpots,
       difficulty: difficulty,

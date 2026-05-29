@@ -6,7 +6,7 @@ import { typography } from '../../theme';
 import { SoundManager } from '../../utils/soundManager';
 
 const info = {
-  name: 'pixi-gabor-patch',
+  name: 'pixi-gabor-patching',
   version: '1.0.0',
   parameters: {
     duration_ms: {
@@ -90,7 +90,7 @@ function createGaborTexture(size: number, freq: number, angle: number): Texture 
   return Texture.from(canvas);
 }
 
-class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
+class PixiGaborPatchingPlugin implements JsPsychPlugin<Info> {
   static info = info;
   private app: Application | null = null;
   private textures: Texture[] = [];
@@ -351,7 +351,7 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
     const trialData = {
       rt: trial.duration_ms,
       correct: true,
-      target: 'GaborPatches',
+      target: 'GaborPatching',
       response: 'clicks',
       acquired_targets: this.hits,
       score: this.score,
@@ -363,4 +363,4 @@ class PixiGaborPatchPlugin implements JsPsychPlugin<Info> {
   }
 }
 
-export default PixiGaborPatchPlugin;
+export default PixiGaborPatchingPlugin;

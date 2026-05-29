@@ -161,10 +161,15 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
   private vehicleZ = 0;
   private vehicleHeading = 0; // radians, 0 = +Z direction
   private vehicleSpeed = 0;
+  private steeringInput = 0;
+  private frontWheelAngle = 0;
+  private lastYawRate = 0;
   private progress = 0;        // projected distance along route (for hazards/HUD)
   private lateralOffset = 0;   // signed distance from route center (+ = right)
   private laneDeviationCount = 0;
   private laneDeviationActive = false;
+  private cameraRoll = 0;
+  private cameraFov = 68;
 
   // Random event scheduling
   private nextHazardDistance = 0;
@@ -205,6 +210,10 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
   private readonly laneOffset = 1.5;
   private readonly vehicleHalfWidth = 1.05;
   private readonly vehicleHalfLength = 2.2;
+  private readonly wheelBase = 2.85;
+  private readonly maxVehicleSpeed = 18;
+  private readonly baseCameraFov = 68;
+  private readonly maxCameraFov = 76;
 
   // Extended route with more segments for free driving
   private readonly route: RouteSegment[] = [
@@ -294,8 +303,13 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
     this.vehicleZ = 2; // start a bit ahead of the route origin
     this.vehicleHeading = 0; // facing +Z
     this.vehicleSpeed = 0;
+    this.steeringInput = 0;
+    this.frontWheelAngle = 0;
+    this.lastYawRate = 0;
     this.progress = 0;
     this.lateralOffset = 0;
+    this.cameraRoll = 0;
+    this.cameraFov = this.baseCameraFov;
     this.trialStartTime = 0;
     this.lastFrameTime = 0;
     this.laneDeviationCount = 0;
@@ -478,7 +492,7 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
 
     const width = Math.max(1, root.clientWidth);
     const height = Math.max(1, root.clientHeight);
-    this.camera = new THREE.PerspectiveCamera(68, width / height, 0.1, 520);
+    this.camera = new THREE.PerspectiveCamera(this.baseCameraFov, width / height, 0.1, 520);
 
     this.renderer = new THREE.WebGLRenderer({
       antialias: false,
@@ -1117,7 +1131,7 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
     this.updateIntersections();
     this.spawnRandomHazards(time);
     this.updateHazards(time);
-    this.updateCameraFree(input.steering);
+    this.updateCameraFree(dt);
     this.updateHud(trial.duration_ms ?? 90_000, elapsed);
     this.updateMiniMap();
 
@@ -1146,23 +1160,33 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
     const throttleAccel = 7.5;
     const brakeDecel = 20;
     const rollingDrag = 1.7;
-    const maxSpeed = 18;
-    const turnRate = 1.6; // radians/sec at full speed
 
     // Speed update
     this.vehicleSpeed += input.throttle * throttleAccel * dt;
     this.vehicleSpeed -= input.brake * brakeDecel * dt;
     this.vehicleSpeed -= rollingDrag * dt;
-    this.vehicleSpeed = Math.max(0, Math.min(maxSpeed, this.vehicleSpeed));
+    this.vehicleSpeed = this.clamp(this.vehicleSpeed, 0, this.maxVehicleSpeed);
 
-    // Positive steering is screen-right in the first-person camera.
-    const speedFactor = Math.max(0.15, this.vehicleSpeed / maxSpeed);
-    this.vehicleHeading -= input.steering * turnRate * speedFactor * dt;
+    const speedRatio = this.clamp(this.vehicleSpeed / this.maxVehicleSpeed, 0, 1);
+    const maxSteerAngle = this.lerp(0.54, 0.16, Math.pow(speedRatio, 0.75));
+    const targetWheelAngle = input.steering * maxSteerAngle;
+    const steeringResponse = Math.abs(input.steering) > 0.01 ? 5.8 : 8.4;
+    this.frontWheelAngle = this.expSmoothing(this.frontWheelAngle, targetWheelAngle, steeringResponse, dt);
+    this.steeringInput = maxSteerAngle > 0
+      ? this.clamp(this.frontWheelAngle / maxSteerAngle, -1, 1)
+      : 0;
+
+    // Kinematic bicycle model: no body rotation while stationary.
+    this.lastYawRate = this.vehicleSpeed > 0.03
+      ? -(this.vehicleSpeed * Math.tan(this.frontWheelAngle) / this.wheelBase)
+      : 0;
+    this.vehicleHeading += this.lastYawRate * dt;
 
     // Move forward in heading direction
     // heading=0 → moving in +Z, heading=PI/2 → moving in +X
-    this.vehicleX += Math.sin(this.vehicleHeading) * this.vehicleSpeed * dt;
-    this.vehicleZ += Math.cos(this.vehicleHeading) * this.vehicleSpeed * dt;
+    const forward = this.getForwardVector(this.vehicleHeading);
+    this.vehicleX += forward.x * this.vehicleSpeed * dt;
+    this.vehicleZ += forward.z * this.vehicleSpeed * dt;
 
     // Project vehicle position onto the route to compute progress & lateral offset
     const proj = this.projectOntoRoute(this.vehicleX, this.vehicleZ);
@@ -1559,10 +1583,11 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
    * CAMERA – follows vehicle world position & heading
    * Camera positioned slightly RIGHT of vehicle center (right-lane Taiwan driving)
    * ================================================================ */
-  private updateCameraFree(steering: number) {
+  private updateCameraFree(dt: number) {
     if (!this.camera) return;
 
-    const cabinSway = steering * 0.35;
+    const speedRatio = this.clamp(this.vehicleSpeed / this.maxVehicleSpeed, 0, 1);
+    const cabinSway = this.steeringInput * 0.28;
     const right = this.getVisualRightVector(this.vehicleHeading);
     const forward = this.getForwardVector(this.vehicleHeading);
 
@@ -1577,6 +1602,18 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
     const lookX = this.vehicleX + forward.x * lookDist + right.x * this.laneOffset;
     const lookZ = this.vehicleZ + forward.z * lookDist + right.z * this.laneOffset;
     this.camera.lookAt(lookX, 1.65, lookZ);
+
+    const targetRoll = this.clamp(this.lastYawRate * 0.035, -0.052, 0.052);
+    this.cameraRoll = this.expSmoothing(this.cameraRoll, targetRoll, 5.5, dt);
+    this.camera.rotateZ(this.cameraRoll);
+
+    const targetFov = this.baseCameraFov
+      + (this.maxCameraFov - this.baseCameraFov) * Math.pow(speedRatio, 1.25);
+    this.cameraFov = this.expSmoothing(this.cameraFov, targetFov, 3.2, dt);
+    if (Math.abs(this.camera.fov - this.cameraFov) > 0.01) {
+      this.camera.fov = this.cameraFov;
+      this.camera.updateProjectionMatrix();
+    }
   }
 
   private updateHud(durationMs: number, elapsedMs: number) {
@@ -1642,6 +1679,19 @@ class ThreeDrivingRehabPlugin implements JsPsychPlugin<Info> {
   private normalizePedalAxis(value: number): number {
     if (!Number.isFinite(value)) return 0;
     return Math.max(0, Math.min(1, (1 - value) / 2));
+  }
+
+  private clamp(value: number, min: number, max: number): number {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  private lerp(start: number, end: number, t: number): number {
+    return start + (end - start) * this.clamp(t, 0, 1);
+  }
+
+  private expSmoothing(current: number, target: number, response: number, dt: number): number {
+    const t = 1 - Math.exp(-Math.max(0, response) * Math.max(0, dt));
+    return this.lerp(current, target, t);
   }
 
   private getForwardVector(angle: number): Vec2 {

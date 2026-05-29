@@ -161,7 +161,7 @@ src/
 - **[FrACT10](https://github.com/michaelbach/FrACT10)**：視力評估與移動卡片訓練的介面/演算法參考來源。
 - **[styts/eye-training](https://github.com/styts/eye-training)**：移動卡片訓練概念參考來源。
 - **[Jesper-N/foveaflow](https://github.com/Jesper-N/foveaflow)**：眼動訓練模組參考訓練模式與互動概念。FoveaFlow 由 Jesper Nielsen 開發，採 MIT License。
-- **[Fordi/eyegame](https://github.com/Fordi/eyegame)**：Gabor Patch 訓練概念參考來源。
+- **[Fordi/gabor-patching](https://github.com/Fordi/gabor-patching)**：Gabor Patching 訓練概念參考來源。
 
 ## 開發
 
