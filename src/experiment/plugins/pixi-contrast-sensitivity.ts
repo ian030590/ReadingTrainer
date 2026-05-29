@@ -154,10 +154,11 @@ class PixiContrastSensitivityPlugin implements JsPsychPlugin<Info> {
       const keys = ['ArrowRight', 'ArrowUp', 'ArrowLeft', 'ArrowDown'];
       expectedKey = keys[trial.direction! / 2];
     } else if (trial.optotype === 'grating') {
-      const isUp = key === 'ArrowUp' || key === 'ArrowDown' || key === '8' || key === '2';
-      const isRight = key === 'ArrowRight' || key === 'ArrowLeft' || key === '4' || key === '6';
-      const isUpRight = key === 'ArrowUpRight' || key === 'ArrowDownLeft' || key === '9' || key === '1' || key === 'PageUp' || key === 'End';
-      const isDownRight = key === 'ArrowDownRight' || key === 'ArrowUpLeft' || key === '3' || key === '7' || key === 'PageDown' || key === 'Home';
+      const k = key.toLowerCase();
+      const isUp = k === 'arrowup' || k === 'arrowdown' || k === '8' || k === '2';
+      const isRight = k === 'arrowright' || k === 'arrowleft' || k === '4' || k === '6';
+      const isUpRight = k === 'arrowupright' || k === 'arrowdownleft' || k === '9' || k === '1' || k === 'pageup' || k === 'end';
+      const isDownRight = k === 'arrowdownright' || k === 'arrowupleft' || k === '3' || k === '7' || k === 'pagedown' || k === 'home';
       
       let userDirection = -1;
       if (isUp) userDirection = 0;
